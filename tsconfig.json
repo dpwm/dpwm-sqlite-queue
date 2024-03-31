@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "es2020",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
+    "module": "node16",                                /* Specify what module code is generated. */
+    "strict": true,                                      /* Enable all strict type-checking options. */
+    "verbatimModuleSyntax": true,
+    "declaration": true,
+    "sourceMap": true,
+    "declarationMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src"
+  }
+}

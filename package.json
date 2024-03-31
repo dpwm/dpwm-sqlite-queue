@@ -1,0 +1,26 @@
+{
+  "name": "dpwm-sql-queue",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dpwm/dpwm-sql-queue.git"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc -b"
+  },
+  "keywords": [],
+  "author": "David Mallows",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.12.2",
+    "typescript": "^5.4.3",
+    "vitest": "^1.4.0"
+  },
+  "dependencies": {
+    "dpwm-queue": "^1.0.1"
+  }
+}
