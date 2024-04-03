@@ -5,26 +5,33 @@ const prepare = (db: Database, x: object): unknown => Object.fromEntries(Object.
 const insertMany = <T>(db: Database, stmt: Statement) => db.transaction((xs) => xs.forEach((x: T) => stmt.run(x)))
 
 
-export function prepareDB(db: Database): PreparedStatements {
+export function prepareDB(db: Database): PreparedDB {
   // It is assumed that the DB will be already setup (eg WAL and synchronous=NORMAL)
   // But we will create the task table
   db.prepare(`CREATE TABLE IF NOT EXISTS task ( eventType INT, data JSON, created INTEGER, taken INTEGER, completed INTEGER, result JSON) `).run();
 
-  return prepare(db, {
+  const statements = prepare(db, {
     insert: "INSERT INTO task (eventType, data, created) VALUES (@eventType, @data, @created)",
     byType: "SELECT rowid, eventType, data from task WHERE eventType = @eventType AND completed IS NULL",
     taken: "UPDATE task SET taken = @taken where rowid = @rowid",
     completed: "UPDATE task SET completed = @completed, result = @result where rowid = @rowid",
     delete: "DELETE from task WHERE eventType = @eventType",
   }) as PreparedStatements;
+
+  return {statements, db};
 }
 
 interface PreparedStatements {
   insert: Statement<{eventType: number, data: string, created: number}>;
   byType: Statement<{eventType: number}>;
-  taken: Statement<{rowid: number}>;
-  completed: Statement<{rowid: number, completed: number}>;
+  taken: Statement<{rowid: number, taken: number}>;
+  completed: Statement<{rowid: number, completed: number, result: any}>;
   delete: Statement<{eventType: number}>;
+}
+
+interface PreparedDB {
+  statements: PreparedStatements,
+  db: Database,
 }
 
 export interface SQLQueueOptions {
@@ -61,13 +68,14 @@ export class SQLQueue<T> {
   eventType: number;
   taskStatements: PreparedStatements;
   db: Database;
+  _workers: number = 1;
 
-  constructor(eventType: number, taskStatements: PreparedStatements, db: Database) {
-    const rawStatements = taskStatements.byType.all({eventType}) as SQLTask[] ;
-    const statements = rawStatements.map(SQLTask.decode<T>);
-    this.queue = new Queue<Task<T>>(statements);
+  constructor(eventType: number, {statements, db}: PreparedDB) {
+    const rawTasks = statements.byType.all({eventType}) as SQLTask[] ;
+    const tasks = rawTasks.map(SQLTask.decode<T>);
+    this.queue = new Queue<Task<T>>(tasks);
     this.eventType = eventType;
-    this.taskStatements = taskStatements;
+    this.taskStatements = statements;
     this.db = db;
 
     function listen(callback: (task: Task<T>) => void) {
@@ -85,6 +93,25 @@ export class SQLQueue<T> {
       data: JSON.stringify(data),
       eventType: this.eventType,
       created: Date.now()})));
+  }
+
+  workers(n: number): SQLQueue<T> {
+    this._workers = n;
+    return this;
+  }
+
+  pForEach(f: (task: Task<T>) => Promise<any>): Promise<void> {
+    const { taskStatements } = this;
+
+    async function callback(task: Task<T>): Promise<void> {
+      // log taken
+      const {rowid} = task;
+      taskStatements.taken.run({rowid, taken: Date.now()})
+      const output: any = await f(task);
+      const result = (output !== undefined) ? JSON.stringify(output) : undefined;
+      taskStatements.completed.run({rowid, result, completed: Date.now()})
+    }
+    return this.queue.pForEach(callback, this._workers);
   }
 }
 
