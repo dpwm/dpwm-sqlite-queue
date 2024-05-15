@@ -1,1 +1,1 @@
-export { SQLQueue } from './sqlqueue.js';
+export { SQLQueue, prepareDB } from './sqlqueue.js';
