@@ -1,12 +1,12 @@
 {
   "name": "dpwm-sql-queue",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "dist/index.js",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dpwm/dpwm-sql-queue.git"
+    "url": "git+https://github.com/dpwm/dpwm-sql-queue.git"
   },
   "scripts": {
     "test": "vitest run",
