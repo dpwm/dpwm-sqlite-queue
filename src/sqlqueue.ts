@@ -100,7 +100,7 @@ export class SQLQueue<T> {
     return this;
   }
 
-  pForEach(f: (task: Task<T>) => Promise<any>): Promise<void> {
+  pForEach(f: (task: Task<T>) => Promise<any>, onError: any = () => {}): Promise<void> {
     const { taskStatements } = this;
 
     async function callback(task: Task<T>): Promise<void> {
@@ -111,7 +111,7 @@ export class SQLQueue<T> {
       const result = (output !== undefined) ? JSON.stringify(output) : undefined;
       taskStatements.completed.run({rowid, result, completed: Date.now()})
     }
-    return this.queue.pForEach(callback, this._workers);
+    return this.queue.pForEach(callback, this._workers, 1, onError);
   }
 }
 
